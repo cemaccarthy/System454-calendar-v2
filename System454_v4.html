@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
+    <title>symmetry454</title>
+    
+    <!-- Bauhaus-inspired geometric sans-serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #000000;
+            --red: #be1e2d;
+            --yellow: #ffde17;
+            --blue: #21409a;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--white);
+            color: var(--black);
+            font-family: 'Josefin Sans', sans-serif;
+            height: 100vh;
+            height: 100dvh; /* Critical for iPhone web app full height */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- APP TITLE HEADER --- */
+        header {
+            padding: calc(10px + var(--safe-top)) 20px 10px;
+            text-align: center;
+            border-bottom: 2px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        /* --- NAVIGATION TABS --- */
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--black);
+            font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 5px 0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--blue);
+        }
+
+        /* --- MAIN CONTAINER --- */
+        main { 
+            flex: 1; 
+            position: relative; 
+            overflow: hidden; /* Prevent page scroll, grid handles its own if needed */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page { display: none; height: 100%; flex-direction: column; }
+        .page.active { display: flex; }
+
+        /* --- CALENDAR HEADER (MONTH NAV) --- */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .cal-title {
+            font-size: 1.1rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .cal-nav {
+            background: none;
+            border: 1px solid var(--black);
+            color: var(--black);
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-family: 'Josefin Sans', sans-serif;
+        }
+        .cal-nav:active { background: var(--yellow); }
+
+        /* --- EXCEL STYLE GRID (FITS SCREEN) --- */
+        .weekday-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 2px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .weekday-cell {
+            padding: 6px 0;
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-right: 1px solid var(--black);
+        }
+        .weekday-cell:last-child { border-right: none; }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* Fill remaining vertical space exactly */
+            flex: 1; 
+            border-right: 1px solid var(--black);
+            border-bottom: 1px solid var(--black);
+        }
+
+        .day-cell {
+            border-left: 1px solid var(--black);
+            border-top: 1px solid var(--black);
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            cursor: pointer;
+            background: var(--white);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .day-cell.empty { background: var(--white); cursor: default; }
+        
+        /* Selection: Blue outline */
+        .day-cell.selected { 
+            outline: 2px solid var(--blue); 
+            outline-offset: -2px; 
+            z-index: 2;
+        }
+
+        /* Today Highlight: Yellow background fill as requested for current day visibility */
+        .day-cell.today { 
+            background-color: rgba(255, 222, 23, 0.2); 
+        }
+        .day-cell.today .day-num { 
+            font-weight: 700; 
+            color: var(--black);
+        }
+
+        .day-num { 
+            font-size: 0.75rem; 
+            line-height: 1; 
+            margin-bottom: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Events & Holidays List */
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.55rem;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Auto Holidays: Blue Text */
+        .event-item.holiday-auto { color: var(--blue); }
+        
+        /* User Events: Color chosen by user (default blue, optional red) */
+        .event-item.event-blue { color: var(--blue); }
+        .event-item.event-red { color: var(--red); font-weight: 600; }
+
+        /* Yellow Star Icon for Holidays */
+        .star-icon {
+            width: 8px;
+            height: 8px;
+            flex-shrink: 0;
+            background-color: var(--yellow);
+            mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0xMiAyTDkuNSA4LjVMMyA5LjVMOCAxNC41TDYuNSAyMUwxMiAxNy41TDE3LjUgMjFMMTYgMTQuNUwyMSA5LjVMMTQuNSA4LjVMMTIgMloiLz48L3N2Zz4=");
+            -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0xMiAyTDkuNSA4LjVMMyA5LjVMOCAxNC41TDYuNSAyMUwxMiAxNy41TDE3LjUgMjFMMTYgMTQuNUwyMSA5LjVMMTQuNSA4LjVMMTIgMloiLz48L3N2Zz4=");
+            mask-size: contain;
+            -webkit-mask-size: contain;
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+        }
+
+        /* --- MARK DAY BUTTON (YELLOW FILL) --- */
+        .mark-btn-container {
+            padding: 10px 15px calc(10px + var(--safe-bottom));
+            border-top: 1px solid var(--black);
+            background: var(--white);
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .mark-btn {
+            background: var(--yellow);
+            border: 1px solid var(--black);
+            color: var(--black);
+            padding: 10px 40px;
+            font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .mark-btn:active { opacity: 0.8; }
+        .mark-btn.hidden { visibility: hidden; pointer-events: none; }
+
+        /* --- CONVERTER PAGE --- */
+        .converter-content { padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .conv-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .conv-input {
+            width: 100%; padding: 10px; background: var(--white);
+            border: 1px solid var(--black); font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.9rem; outline: none;
+        }
+        .conv-result { border: 1px solid var(--black); padding: 15px; text-align: center; }
+        .conv-result h3 { margin: 0 0 4px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--blue); }
+        .conv-result p { margin: 0; font-size: 1rem; }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: none; align-items: center; justify-content: center;
+            z-index: 100; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--white); border: 2px solid var(--black); padding: 25px; width: 100%; max-width: 300px; }
+        .modal h2 { margin: 0 0 20px; font-weight: 300; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 1.2rem; }
+
+        .type-selector { display: flex; gap: 0; margin-bottom: 20px; border: 1px solid var(--black); }
+        .type-btn {
+            flex: 1; padding: 10px; border: none; background: var(--white);
+            color: var(--black); font-family: 'Josefin Sans', sans-serif;
+            text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; cursor: pointer;
+        }
+        .type-btn:first-child { border-right: 1px solid var(--black); }
+        .type-btn.active[data-type="blue"] { background: var(--blue); color: var(--white); }
+        .type-btn.active[data-type="red"] { background: var(--red); color: var(--white); }
+
+        .modal input[type="text"] {
+            width: 100%; padding: 10px; margin-bottom: 20px;
+            border: 1px solid var(--black); background: var(--white);
+            font-family: 'Josefin Sans', sans-serif; font-size: 0.9rem; outline: none;
+        }
+
+        .modal-actions { display: flex; gap: 0; border: 1px solid var(--black); }
+        .btn-save, .btn-cancel {
+            flex: 1; padding: 12px; border: none; background: var(--white);
+            font-family: 'Josefin Sans', sans-serif; text-transform: uppercase;
+            letter-spacing: 1px; font-size: 0.7rem; cursor: pointer;
+        }
+        .btn-save { border-left: 1px solid var(--black); }
+        .btn-save:active { background: var(--yellow); }
+        .btn-cancel:active { background: #eee; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>symmetry454</h1>
+</header>
+
+<nav>
+    <button class="nav-btn active" data-page="calendar">Calendar</button>
+    <button class="nav-btn" data-page="converter">Converter</button>
+</nav>
+
+<main>
+    <!-- CALENDAR PAGE -->
+    <div id="page-calendar" class="page active">
+        <div class="cal-header">
+            <button class="cal-nav" id="prev-month">←</button>
+            <div class="cal-title" id="cal-title">July 2026</div>
+            <button class="cal-nav" id="next-month">→</button>
+        </div>
+        
+        <!-- MONDAY START WEEK (Abbreviated to fit perfectly) -->
+        <div class="weekday-row">
+            <div class="weekday-cell">Mon</div>
+            <div class="weekday-cell">Tue</div>
+            <div class="weekday-cell">Wed</div>
+            <div class="weekday-cell">Thu</div>
+            <div class="weekday-cell">Fri</div>
+            <div class="weekday-cell">Sat</div>
+            <div class="weekday-cell">Sun</div>
+        </div>
+
+        <div class="days-grid" id="days-grid"></div>
+        
+        <div class="mark-btn-container">
+            <button class="mark-btn hidden" id="mark-day-btn">Mark Day</button>
+        </div>
+    </div>
+
+    <!-- CONVERTER PAGE -->
+    <div id="page-converter" class="page">
+        <div class="converter-content">
+            <div class="conv-group">
+                <label>Gregorian Date</label>
+                <input type="date" class="conv-input" id="greg-input">
+            </div>
+            <div class="conv-result">
+                <h3>Symmetry454</h3>
+                <p id="sym-result">—</p>
+            </div>
+            <div class="conv-group">
+                <label>Symmetry454 (YYYY-MM-DD)</label>
+                <input type="text" class="conv-input" id="sym-input" placeholder="2026-07-15">
+            </div>
+            <div class="conv-result">
+                <h3>Gregorian</h3>
+                <p id="greg-result">—</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="event-modal">
+    <div class="modal">
+        <h2>Add Event</h2>
+        <div class="type-selector">
+            <button class="type-btn active" data-type="blue">Standard</button>
+            <button class="type-btn" data-type="red">Highlight</button>
+        </div>
+        <input type="text" id="event-name" placeholder="Event name..." autocomplete="off">
+        <div class="modal-actions">
+            <button class="btn-cancel" id="modal-cancel">Cancel</button>
+            <button class="btn-save" id="modal-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * SYMMETRY454 ENGINE
+ */
+const S454 = (() => {
+    const ANCHOR_GREG = new Date(2026, 6, 15);
+    const ANCHOR_S454 = { year: 2026, month: 7, day: 15 };
+    
+    function isLeap(year) { return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0); }
+    function getWeeksInMonth(year, month) {
+        const pattern = [4, 5, 4];
+        let weeks = pattern[((month - 1) % 3)];
+        if (month === 12 && isLeap(year)) weeks += 1;
+        return weeks;
+    }
+    function getDaysInMonth(year, month) { return getWeeksInMonth(year, month) * 7; }
+    function getDaysInYear(year) { return isLeap(year) ? 371 : 364; }
+    
+    function s454ToDayCount(y, m, d) {
+        let days = 0;
+        for (let yr = 1; yr < y; yr++) days += getDaysInYear(yr);
+        for (let mo = 1; mo < m; mo++) days += getDaysInMonth(y, mo);
+        return days + d - 1;
+    }
+    
+    function gregToDayCount(date) {
+        const start = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const epoch = new Date(Date.UTC(1, 0, 1));
+        return Math.floor((start - epoch) / 86400000);
+    }
+    
+    const anchorSDays = s454ToDayCount(ANCHOR_S454.year, ANCHOR_S454.month, ANCHOR_S454.day);
+    const anchorGDays = gregToDayCount(ANCHOR_GREG);
+    const OFFSET = anchorGDays - anchorSDays;
+
+    function s454ToGregorian(y, m, d) {
+        const gDays = s454ToDayCount(y, m, d) + OFFSET;
+        const epoch = new Date(Date.UTC(1, 0, 1));
+        const result = new Date(epoch.getTime() + gDays * 86400000);
+        return { year: result.getUTCFullYear(), month: result.getUTCMonth() + 1, day: result.getUTCDate() };
+    }
+
+    function gregorianToS454(gYear, gMonth, gDay) {
+        const gDate = new Date(Date.UTC(gYear, gMonth - 1, gDay));
+        const sDays = gregToDayCount(gDate) - OFFSET;
+        let y = 1, remaining = sDays;
+        while (true) { const dy = getDaysInYear(y); if (remaining < dy) break; remaining -= dy; y++; }
+        let m = 1;
+        while (true) { const dm = getDaysInMonth(y, m); if (remaining < dm) break; remaining -= dm; m++; }
+        return { year: y, month: m, day: remaining + 1 };
+    }
+
+    // Monday = 0 offset
+    function getDayOfWeek(y, m, d) {
+        const totalDays = s454ToDayCount(y, m, d);
+        return totalDays % 7; 
+    }
+
+    return { getDaysInMonth, getDayOfWeek, s454ToGregorian, gregorianToS454, isLeap };
+})();
+
+/** VANCOUVER HOLIDAYS (Auto-populated, displayed in BLUE) */
+function getVancouverHolidays(s454Year) {
+    const holidays = [];
+    const gYear = s454Year;
+    
+    function nthMonday(year, month, n) {
+        const first = new Date(year, month - 1, 1);
+        const firstMon = ((8 - first.getDay()) % 7) + 1;
+        return new Date(year, month - 1, firstMon + (n - 1) * 7);
+    }
+
+    const a=gYear%19, b=Math.floor(gYear/100), c=gYear%100, d=Math.floor(b/4), e=b%4;
+    const f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3);
+    const h=(19*a+b-d-g+15)%30, i=Math.floor(c/4), k=c%4;
+    const l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451);
+    const easterMonth=Math.floor((h+l-7*m+114)/31);
+    const easterDay=((h+l-7*m+114)%31)+1;
+    const goodFriday=new Date(gYear,easterMonth-1,easterDay-2);
+
+    const may25=new Date(gYear,4,25);
+    const victoriaDay=new Date(gYear,4,25-((may25.getDay()+6)%7));
+
+    const dynamic=[
+        {name:"Good Friday",date:goodFriday},
+        {name:"Victoria Day",date:victoriaDay},
+        {name:"BC Day",date:nthMonday(gYear,8,1)},
+        {name:"Labour Day",date:nthMonday(gYear,9,1)},
+        {name:"Thanksgiving",date:nthMonday(gYear,10,2)}
+    ];
+    const fixed=[
+        {name:"New Year's",m:1,d:1},{name:"Canada Day",m:7,d:1},
+        {name:"Truth & Rec.",m:9,d:30},{name:"Remembrance",m:11,d:11},
+        {name:"Christmas",m:12,d:25},{name:"Boxing Day",m:12,d:26}
+    ];
+
+    [...fixed.map(f=>({name:f.name,date:new Date(gYear,f.m-1,f.d)})),...dynamic].forEach(h=>{
+        const s=S454.gregorianToS454(h.date.getFullYear(),h.date.getMonth()+1,h.date.getDate());
+        if(s.year===s454Year) holidays.push({month:s.month,day:s.day,name:h.name});
+    });
+    return holidays;
+}
+
+/** APP STATE */
+const state = {
+    viewYear: 2026, viewMonth: 7, selectedDay: null,
+    events: JSON.parse(localStorage.getItem('sym454_events')||'{}'), 
+    modalColor: 'blue' // Default user event color
+};
+
+const els = {
+    grid:document.getElementById('days-grid'), title:document.getElementById('cal-title'),
+    markBtn:document.getElementById('mark-day-btn'), modal:document.getElementById('event-modal'),
+    eventName:document.getElementById('event-name'), typeBtns:document.querySelectorAll('.type-btn'),
+    navBtns:document.querySelectorAll('.nav-btn'), pages:document.querySelectorAll('.page'),
+    gregInput:document.getElementById('greg-input'), symResult:Here is the updated `index.html`. This version is strictly optimized for the iPhone 16e screen real estate, ensuring the entire calendar grid fits without scrolling. It implements the unified Excel-style grid, corrected color logic (Blue auto-holidays, User choice for events), yellow star icons, and the specific Bauhaus typography hierarchy you requested.
+
+```html
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ffffff">
+    <title>symmetry454</title>
+    
+   document.getElementById('sym-result'),
+    <!-- Bauhaus-inspired geometric sans-serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --white: #ffffff;
+            --black: #000000;
+            --red: #be1e2d;
+            --yellow: #ffde17;
+            --blue: #21409a;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--white);
+            color: var(--black);
+            font-family: 'Josefin Sans', sans-serif;
+            height: 100vh;
+            height: 100dvh; /* Critical for iPhone web app full height */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- APP TITLE HEADER --- */
+        header {
+            padding: calc(10px + var(--safe-top)) 20px 10px;
+            text-align: center;
+            border-bottom: 2px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        /* --- NAVIGATION TABS --- */
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--black);
+            font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding: 5px 0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--blue);
+        }
+
+        /* --- MAIN CONTAINER --- */
+        main { 
+            flex: 1; 
+            position: relative; 
+            overflow: hidden; /* Prevent page scroll, grid handles its own if needed */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page { display: none; height: 100%; flex-direction: column; }
+        .page.active { display: flex; }
+
+        /* --- CALENDAR HEADER (MONTH NAV) --- */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .cal-title {
+            font-size: 1.1rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .cal-nav {
+            background: none;
+            border: 1px solid var(--black);
+            color: var(--black);
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-family: 'Josefin Sans', sans-serif;
+        }
+        .cal-nav:active { background: var(--yellow); }
+
+        /* --- EXCEL STYLE GRID (FITS SCREEN) --- */
+        .weekday-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 2px solid var(--black);
+            flex-shrink: 0;
+        }
+
+        .weekday-cell {
+            padding: 6px 0;
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-right: 1px solid var(--black);
+        }
+        .weekday-cell:last-child { border-right: none; }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            /* Fill remaining vertical space exactly */
+            flex: 1; 
+            border-right: 1px solid var(--black);
+            border-bottom: 1px solid var(--black);
+        }
+
+        .day-cell {
+            border-left: 1px solid var(--black);
+            border-top: 1px solid var(--black);
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            cursor: pointer;
+            background: var(--white);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .day-cell.empty { background: var(--white); cursor: default; }
+        
+        /* Selection: Blue outline */
+        .day-cell.selected { 
+            outline: 2px solid var(--blue); 
+            outline-offset: -2px; 
+            z-index: 2;
+        }
+
+        /* Today Highlight: Yellow background fill as requested for current day visibility */
+        .day-cell.today { 
+            background-color: rgba(255, 222, 23, 0.2); 
+        }
+        .day-cell.today .day-num { 
+            font-weight: 700; 
+            color: var(--black);
+        }
+
+        .day-num { 
+            font-size: 0.75rem; 
+            line-height: 1; 
+            margin-bottom: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Events & Holidays List */
+        .event-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .event-item {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.55rem;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Auto Holidays: Blue Text */
+        .event-item.holiday-auto { color: var(--blue); }
+        
+        /* User Events: Color chosen by user (default blue, optional red) */
+        .event-item.event-blue { color: var(--blue); }
+        .event-item.event-red { color: var(--red); font-weight: 600; }
+
+        /* Yellow Star Icon for Holidays */
+        .star-icon {
+            width: 8px;
+            height: 8px;
+            flex-shrink: 0;
+            background-color: var(--yellow);
+            mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0xMiAyTDkuNSA4LjVMMyA5LjVMOCAxNC41TDYuNSAyMUwxMiAxNy41TDE3LjUgMjFMMTYgMTQuNUwyMSA5LjVMMTQuNSA4LjVMMTIgMloiLz48L3N2Zz4=");
+            -webkit-mask-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iYmxhY2siPjxwYXRoIGQ9Ik0xMiAyTDkuNSA4LjVMMyA5LjVMOCAxNC41TDYuNSAyMUwxMiAxNy41TDE3LjUgMjFMMTYgMTQuNUwyMSA5LjVMMTQuNSA4LjVMMTIgMloiLz48L3N2Zz4=");
+            mask-size: contain;
+            -webkit-mask-size: contain;
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+        }
+
+        /* --- MARK DAY BUTTON (YELLOW FILL) --- */
+        .mark-btn-container {
+            padding: 10px 15px calc(10px + var(--safe-bottom));
+            border-top: 1px solid var(--black);
+            background: var(--white);
+            display: flex;
+            justify-content: center;
+            flex-shrink: 0;
+            min-height: 56px;
+        }
+
+        .mark-btn {
+            background: var(--yellow);
+            border: 1px solid var(--black);
+            color: var(--black);
+            padding: 10px 40px;
+            font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .mark-btn:active { opacity: 0.8; }
+        .mark-btn.hidden { visibility: hidden; pointer-events: none; }
+
+        /* --- CONVERTER PAGE --- */
+        .converter-content { padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
+        .conv-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .conv-input {
+            width: 100%; padding: 10px; background: var(--white);
+            border: 1px solid var(--black); font-family: 'Josefin Sans', sans-serif;
+            font-size: 0.9rem; outline: none;
+        }
+        .conv-result { border: 1px solid var(--black); padding: 15px; text-align: center; }
+        .conv-result h3 { margin: 0 0 4px; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; color: var(--blue); }
+        .conv-result p { margin: 0; font-size: 1rem; }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: none; align-items: center; justify-content: center;
+            z-index: 100; padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal { background: var(--white); border: 2px solid var(--black); padding: 25px; width: 100%; max-width: 300px; }
+        .modal h2 { margin: 0 0 20px; font-weight: 300; text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 1.2rem; }
+
+        .type-selector { display: flex; gap: 0; margin-bottom: 20px; border: 1px solid var(--black); }
+        .type-btn {
+            flex: 1; padding: 10px; border: none; background: var(--white);
+            color: var(--black); font-family: 'Josefin Sans', sans-serif;
+            text-transform: uppercase; font-size: 0.7rem; letter-spacing: 1px; cursor: pointer;
+        }
+        .type-btn:first-child { border-right: 1px solid var(--black); }
+        .type-btn.active[data-type="blue"] { background: var(--blue); color: var(--white); }
+        .type-btn.active[data-type="red"] { background: var(--red); color: var(--white); }
+
+        .modal input[type="text"] {
+            width: 100%; padding: 10px; margin-bottom: 20px;
+            border: 1px solid var(--black); background: var(--white);
+            font-family: 'Josefin Sans', sans-serif; font-size: 0.9rem; outline: none;
+        }
+
+        .modal-actions { display: flex; gap: 0; border: 1px solid var(--black); }
+        .btn-save, .btn-cancel {
+            flex: 1; padding: 12px; border: none; background: var(--white);
+            font-family: 'Josefin Sans', sans-serif; text-transform: uppercase;
+            letter-spacing: 1px; font-size: 0.7rem; cursor: pointer;
+        }
+        .btn-save { border-left: 1px solid var(--black); }
+        .btn-save:active { background: var(--yellow); }
+        .btn-cancel:active { background: #eee; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>symmetry454</h1>
+</header>
+
+<nav>
+    <button class="nav-btn active" data-page="calendar">Calendar</button>
+    <button class="nav-btn" data-page="converter">Converter</button>
+</nav>
+
+<main>
+    <!-- CALENDAR PAGE -->
+    <div id="page-calendar" class="page active">
+        <div class="cal-header">
+            <button class="cal-nav" id="prev-month">←</button>
+            <div class="cal-title" id="cal-title">July 2026</div>
+            <button class="cal-nav" id="next-month">→</button>
+        </div>
+        
+        <!-- MONDAY START WEEK (Abbreviated to fit perfectly) -->
+        <div class="weekday-row">
+            <div class="weekday-cell">Mon</div>
+            <div class="weekday-cell">Tue</div>
+            <div class="weekday-cell">Wed</div>
+            <div class="weekday-cell">Thu</div>
+            <div class="weekday-cell">Fri</div>
+            <div class="weekday-cell">Sat</div>
+            <div class="weekday-cell">Sun</div>
+        </div>
+
+        <div class="days-grid" id="days-grid"></div>
+        
+        <div class="mark-btn-container">
+            <button class="mark-btn hidden" id="mark-day-btn">Mark Day</button>
+        </div>
+    </div>
+
+    <!-- CONVERTER PAGE -->
+    <div id="page-converter" class="page">
+        <div class="converter-content">
+            <div class="conv-group">
+                <label>Gregorian Date</label>
+                <input type="date" class="conv-input" id="greg-input">
+            </div>
+            <div class="conv-result">
+                <h3>Symmetry454</h3>
+                <p id="sym-result">—</p>
+            </div>
+            <div class="conv-group">
+                <label>Symmetry454 (YYYY-MM-DD)</label>
+                <input type="text" class="conv-input" id="sym-input" placeholder="2026-07-15">
+            </div>
+            <div class="conv-result">
+                <h3>Gregorian</h3>
+                <p id="greg-result">—</p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="event-modal">
+    <div class="modal">
+        <h2>Add Event</h2>
+        <div class="type-selector">
+            <button class="type-btn active" data-type="blue">Standard</button>
+            <button class="type-btn" data-type="red">Highlight</button>
+        </div>
+        <input type="text" id="event-name" placeholder="Event name..." autocomplete="off">
+        <div class="modal-actions">
+            <button class="btn-cancel" id="modal-cancel">Cancel</button>
+            <button class="btn-save" id="modal-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * SYMMETRY454 ENGINE
+ */
+const S454 = (() => {
+    const ANCHOR_GREG = new Date(2026, 6, 15);
+    const ANCHOR_S454 = { year: 2026, month: 7, day: 15 };
+    
+    function isLeap(year) { return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0); }
+    function getWeeksInMonth(year, month) {
+        const pattern = [4, 5, 4];
+        let weeks = pattern[((month - 1) % 3)];
+        if (month === 12 && isLeap(year)) weeks += 1;
+        return weeks;
+    }
+    function getDaysInMonth(year, month) { return getWeeksInMonth(year, month) * 7; }
+    function getDaysInYear(year) { return isLeap(year) ? 371 : 364; }
+    
+    function s454ToDayCount(y, m, d) {
+        let days = 0;
+        for (let yr = 1; yr < y; yr++) days += getDaysInYear(yr);
+        for (let mo = 1; mo < m; mo++) days += getDaysInMonth(y, mo);
+        return days + d - 1;
+    }
+    
+    function gregToDayCount(date) {
+        const start = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const epoch = new Date(Date.UTC(1, 0, 1));
+        return Math.floor((start - epoch) / 86400000);
+    }
+    
+    const anchorSDays = s454ToDayCount(ANCHOR_S454.year, ANCHOR_S454.month, ANCHOR_S454.day);
+    const anchorGDays = gregToDayCount(ANCHOR_GREG);
+    const OFFSET = anchorGDays - anchorSDays;
+
+    function s454ToGregorian(y, m, d) {
+        const gDays = s454ToDayCount(y, m, d) + OFFSET;
+        const epoch = new Date(Date.UTC(1, 0, 1));
+        const result = new Date(epoch.getTime() + gDays * 86400000);
+        return { year: result.getUTCFullYear(), month: result symInput:document.getElementById('sym-input.getUTCMonth() + 1, day: result.getUTCDate() };
+    }
+
+    function gregorianToS454(gYear, gMonth, gDay) {
+        const gDate = new Date(Date.UTC(gYear, gMonth - 1, gDay));
+        const sDays = gregToDayCount(gDate) - OFFSET;
+        let y = 1, remaining = sDays;
+        while (true) { const dy = getDaysInYear(y); if (remaining < dy) break; remaining -= dy; y++; }
+        let m = 1;
+        while (true) { const dm = getDaysInMonth(y, m); if (remaining < dm) break; remaining -= dm; m++; }
+        return { year: y, month: m, day: remaining + 1 };
+    }
+
+    // Monday = 0 offset
+    function getDayOfWeek(y, m, d) {
+        const totalDays = s454ToDayCount(y, m, d);
+        return totalDays % 7; 
+    }
+
+    return { getDaysInMonth, getDayOfWeek, s454ToGregorian, gregorianToS454, isLeap };
+})();
+
+/** VANCOUVER HOLIDAYS (Auto-populated, displayed in BLUE) */
+function getVancouverHolidays(s454Year) {
+    const holidays = [];
+    const gYear = s454Year;
+    
+    function nthMonday(year, month, n) {
+        const first = new Date(year, month - 1, 1);
+        const firstMon = ((8 - first.getDay()) % 7) + 1;
+        return new Date(year, month - 1, firstMon + (n - 1) * 7);
+    }
+
+    const a=gYear%19, b=Math.floor(gYear/100), c=gYear%100, d=Math.floor(b/4), e=b%4;
+    const f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3);
+    const h=(19*a+b-d-g+15)%30, i=Math.floor(c/4), k=c%4;
+    const l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451);
+    const easterMonth=Math.floor((h+l-7*m+114)/31);
+    const easterDay=((h+l-7*m+114)%31)+1;
+    const goodFriday=new Date(gYear,easterMonth-1,easterDay-2);
+
+    const may25=new Date(gYear,4,25);
+    const victoriaDay=new Date(gYear,4,25-((may25.getDay()+6)%7));
+
+    const dynamic=[
+        {name:"Good Friday",date:goodFriday},
+        {name:"Victoria Day",date:victoriaDay},
+        {name:"BC Day",date:nthMonday(gYear,8,1)},
+        {name:"Labour Day",date:nthMonday(gYear,9,1)},
+        {name:"Thanksgiving",date:nthMonday(gYear,10,2)}
+    ];
+    const fixed=[
+        {name:"New Year's",m:1,d:1},{name:"Canada Day",m:7,d:1},
+        {name:"Truth & Rec.",m:9,d:30},{name:"Remembrance",m:11,d:11},
+        {name:"Christmas",m:12,d:25},{name:"Boxing Day",m:12,d:26}
+    ];
+
+    [...fixed.map(f=>({name:f.name,date:new Date(gYear,f.m-1,f.d)})),...dynamic].forEach(h=>{
+        const s=S454.gregorianToS454(h.date.getFullYear(),h.date.getMonth()+1,h.date.getDate());
+        if(s.year===s454Year) holidays.push({month:s.month,day:s.day,name:h.name});
+    });
+    return holidays;
+}
+
+/** APP STATE */
+const state = {
+    viewYear: 2026, viewMonth: 7, selectedDay: null,
+    events: JSON.parse(localStorage.getItem('sym454_events')||'{}'), 
+    modalColor: 'blue' // Default user event color
+};
+
+const els = {
+    grid:document.getElementById('days-grid'), title:document.getElementById('cal-title'),
+    markBtn:document.getElementById('mark-day-btn'), modal:document.getElementById('event-modal'),
+    eventName:document.getElementById('event-name'), typeBtns:document.querySelectorAll('.type-btn'),
+    navBtns:document.querySelectorAll('.nav-btn'), pages:document.querySelectorAll('.page'),
+    gregInput:document.getElementById('greg-input'), symResult:document.getElementById('sym-result'),
+    symInput:document.getElementById('sym-input'), gregResult'), gregResult:document.getElementById(':document.getElementById('greg-result')
+greg-result')
+};
+
+const MONTH};
+
+const MONTH_NAMES=["","January_NAMES=["","January","February","March","February","March","April","May","April","May","June","July","June","July","August","September","August","September","October","November","October","November","December"];
+","December"];
+function saveEvents(){function saveEvents(){localStorage.setItem('symlocalStorage.setItem('sym454_events454_events',JSON.stringify(state',JSON.stringify(state.events));}
+.events));}
+function getKey(y,mfunction getKey(y,m,d){return `${,d){return `${y}-<LaTex>id_1</LaTex>{String(m).padStart().padStart(2,'0')2,'0')}-<LaTex>id_2</LaTex>{String(d).padStart(2padStart(2,'0')}`,'0')}`;}
+
+function render;}
+
+function renderCalendar() {
+Calendar() {
+    els.title.textContent    els.title.textContent=`${MONTH_NAMES=`${MONTH_NAMES[state.viewMonth]}[state.viewMonth]} <LaTex>id_3</LaTex>{state.viewYear}`;
+   }`;
+    els.grid.innerHTML=' els.grid.innerHTML='';
+    
+   ';
+    
+    const firstDow const firstDow=S454=S454.getDayOfWeek(state.view.getDayOfWeek(state.viewYear,state.viewMonthYear,state.viewMonth,1);
+,1);
+    const daysIn    const daysInMonth=S45Month=S454.getDaysIn4.getDaysInMonth(state.viewYearMonth(state.viewYear,state.viewMonth);,state.viewMonth);
+    const holidays
+    const holidays=getVancouverH=getVancouverHolidays(state.viewYearolidays(state.viewYear);
+    
+   );
+    
+    // // Empty cells for alignment Empty cells for alignment
+    for(let
+    for(let i=0;i<firstDow i=0;i<firstDow;i++){
+        const empty=document.createElement;i++){
+        const empty=document.createElement('div');
+('div');
+        empty.className='        empty.className='day-cell empty';day-cell empty';
+        els.grid
+        els.grid.appendChild(empty);
+.appendChild(empty);
+    }
+
+       }
+
+    for(let d= for(let d=1;d<=daysInMonth;d++){
+        const cell1;d<=daysInMonth;d++){
+        const cell=document.createElement('div=document.createElement('div');
+        cell');
+        cell.className='day-cell';
+        if.className='day-cell';
+        if(state.selectedDay===d) cell.classList(state.selectedDay===d) cell.classList.add('selected');
+        if(state.add('selected');
+        if(state.viewYear===2.viewYear===2026&&026&&state.viewMonth===state.viewMonth===7&&d===7&&d===15) cell15) cell.classList.add('today.classList.add('today');
+
+        const');
+
+        const num=document.createElement(' num=document.createElement('div');
+       div');
+        num.className='day num.className='day-num'; num.textContent-num'; num.textContent=d;
+       =d;
+        cell.appendChild(num); cell.appendChild(num);
+
+        const key
+
+        const key=getKey(state.view=getKey(state.viewYear,state.viewMonthYear,state.viewMonth,d);
+       ,d);
+        const dayEvents= const dayEvents=state.events[key]state.events[key]||[];
+||[];
+        const hol=h        const hol=holidays.filter(h=>olidays.filter(h=>h.day===dh.day===d);
+        
+       );
+        
+        // Render list: // Render list: Holidays FIRST Holidays FIRST, then User Events, then User Events
+
+        if(dayEvents        if(dayEvents.length>0.length>0||hol.length>||hol.length>0){
+           0){
+            const list=document.createElement const list=document.createElement('div');
+('div');
+            list.className='            list.className='event-list';
+event-list';
+            
+            //             
+            // 1. Auto Holidays1. Auto Holidays (Blue text + (Blue text + Yellow Star) Yellow Star)
+            hol.forEach(h=>{
+
+            hol.forEach(h=>{
+                const item=document                const item=document.createElement('div');.createElement('div');
+                item.className
+                item.className='event-item holiday='event-item holiday-auto';
+                const star=document.createElement-auto';
+                const star=document.createElement('div');
+('div');
+                star.className='                star.className='star-icon';
+                item.appendChild(ststar-icon';
+                item.appendChild(star);
+               ar);
+                const txt const txt=document.createTextNode(h.name=document.createTextNode(h.name);
+);
+                item.appendChild(txt                item.appendChild(txt);
+                list);
+                list.appendChild(item);
+.appendChild(item);
+            });
+
+                       });
+
+            // 2. // 2. User Events (Blue User Events (Blue or Red based on or Red based on selection selection)
+            dayEvents.forEach(e=>)
+            dayEvents.forEach(e=>{
+                const item=document.createElement('{
+                const item=document.createElement('div');
+                item.className=`div');
+                item.className=`event-item event-<LaTex>id_4</LaTex>{e.color || 'blue'}` 'blue'}`;
+                item;
+                item.textContent=e.name;.textContent=e.name;
+                list.appendChild
+                list.appendChild(item);
+           (item);
+            });
+            });
+            cell.appendChild(list); cell.appendChild(list);
+        }
+
+
+        }
+
+        cell.addEventListener('        cell.addEventListener('click',click',()=>{
+           ()=>{
+            state.selectedDay = state.selectedDay = state.selectedDay=== state.selectedDay===d ? null :d ? null : d;
+            els.markBtn.classList d;
+            els.markBtn.classList.toggle('hidden',.toggle('hidden', state.selectedDay=== state.selectedDay===null);
+           null);
+            renderCalendar();
+ renderCalendar();
+        });
+               });
+        els.grid.appendChild(cell els.grid.appendChild(cell);
+    }
+}
+
+//);
+    }
+}
+
+// Month Nav
+document Month Nav
+document.getElementById('prev-month.getElementById('prev-month').addEventListener('click').addEventListener('click',()=>{
+',()=>{
+    state.viewMonth    state.viewMonth--; if(state.view--; if(state.viewMonth<1){Month<1){state.viewMonth=state.viewMonth=12;state12;state.viewYear--;}.viewYear--;}
+    state.selected
+    state.selectedDay=null; elsDay=null; els.markBtn.classList.add.markBtn.classList.add('hidden'); render('hidden'); renderCalendar();
+});Calendar();
+});
+document.getElementById('
+document.getElementById('next-month').addEventListenernext-month').addEventListener('click',()=>('click',()=>{
+    state{
+    state.viewMonth++; if.viewMonth++; if(state.viewMonth>(state.viewMonth>12){state12){state.viewMonth=1.viewMonth=1;state.viewYear;state.viewYear++;}
+   ++;}
+    state.selectedDay=null state.selectedDay=null; els.markBtn; els.markBtn.classList.add('hidden.classList.add('hidden'); renderCalendar();'); renderCalendar();
+});
+
+//
+});
+
+// Tabs
+els.nav Tabs
+els.navBtns.forEach(btnBtns.forEach(btn=>btn.addEventListener('=>btn.addEventListener('click',()=>{click',()=>{
+    els.nav
+    els.navBtns.forEach(bBtns.forEach(b=>b.classList.remove=>b.classList.remove('active'));
+('active'));
+    els.pages.forEach(p=>p.classList    els.pages.forEach(p=>p.classList.remove('active'));.remove('active'));
+    btn.classList
+    btn.classList.add('active');.add('active');
+    document.getElementById
+    document.getElementById(`page-${btn.dataset.page}`).classList(`page-${btn.dataset.page}`).classList.add('active');.add('active');
+}));
+
+
+}));
+
+// Modal Logic
+// Modal Logic
+els.markels.markBtn.addEventListener('clickBtn.addEventListener('click',()=>{
+',()=>{
+    els.modal.classList    els.modal.classList.add('open');.add('open');
+    els.eventName.value='';
+    els.eventName.value='';
+    els.event
+    els.eventName.focus();
+Name.focus();
+});
+document.getElementById});
+document.getElementById('modal-cancel').('modal-cancel').addEventListener('click',addEventListener('click',()=>els.modal.classList()=>els.modal.classList.remove('open'));.remove('open'));
+
+//
+
+// Color Selection in Modal Color Selection in Modal
+els
+els.typeBtns.forEach.typeBtns.forEach(btn=>btn.addEventListener(btn=>btn.addEventListener('click',()=>('click',()=>{
+    els{
+    els.typeBtns.forEach.typeBtns.forEach(b=>b.classList(b=>b.classList.remove('active'));.remove('active'));
+    btn.classList
+    btn.classList.add('active');.add('active'); 
+    state.modal 
+    state.modalColor=btn.datasetColor=btn.dataset.type;
+}.type;
+}));
+
+document.getElementById));
+
+document.getElementById('modal-save').('modal-save').addEventListener('click',addEventListener('click',()=>{
+   ()=>{
+    const name=els const name=els.eventName.value.trim.eventName.value.trim(); 
+    if(); 
+    if(!name(!name)return;
+   )return;
+    const key=getKey const key=getKey(state.viewYear,state(state.viewYear,state.viewMonth,state.selected.viewMonth,state.selectedDay);
+    if(!state.eventsDay);
+    if(!state.events[key])state.events[key])state.events[key]=[];[key]=[];
+    state.events
+    state.events[key].push({[key].push({color:state.modalcolor:state.modalColor, name});Color, name});
+    saveEvents
+    saveEvents(); 
+    els(); 
+    els.modal.classList.remove('.modal.classList.remove('open'); 
+   open'); 
+    renderCalendar();
+ renderCalendar();
+});
+
+// Converter});
+
+// Converter
+els.greg
+els.gregInput.addEventListener('changeInput.addEventListener('change',()=>{
+',()=>{
+    const v=    const v=els.gregInput.value; if(!els.gregInput.value; if(!v)return;
+    const[y,mv)return;
+    const[y,m,d]=v.split('-').map(Number,d]=v.split('-').map(Number);
+    const s=S45);
+    const s=S454.gregorianToS454.gregorianToS454(y,m,d4(y,m,d);
+    els);
+    els.symResult.textContent=`.symResult.textContent=`<LaTex>id_5</LaTex>{MONTH_NAMES[s.month]} <LaTex>id_6</LaTex>{s.day}, <LaTex>id_7</LaTex>{s.year}`;
+.year}`;
+});
+els.sym});
+els.symInput.addEventListener('inputInput.addEventListener('input',()=>{
+',()=>{
+    const m=    const m=els.symInput.valueels.symInput.value.trim().match(/^.trim().match(/^(\d{4(\d{4})-(\d})-(\d{1,2{1,2})-(\d})-(\d{1,2{1,2})<LaTex>id_8</LaTex>/);
+    if(!m    if(!m){els.greg){els.gregResult.textContent='—Result.textContent='—';return;}
+    try{
+';return;}
+    try{
+        const g=S        const g=S454.s454.s454To454ToGregorian(...mGregorian(...m.slice(1)..slice(1).map(Number));
+map(Number));
+        els.greg        els.gregResult.textContent=`${g.year}-${String(g.month).padResult.textContent=`<LaTex>id_9</LaTex>{String(g.month).padStart(2,'Start(2,'0')}-<LaTex>id_10</LaTex>{String(g.day).pad(g.day).padStart(2,'Start(2,'0')}`;0')}`;
+    }catch
+    }catch{els.greg{els.gregResult.textContent='InvalidResult.textContent='Invalid';}
+});';}
+});
+
+// Init
+
+
+// Init
+els.gregInputels.gregInput.valueAsDate=new.valueAsDate=new Date();
+els.gregInput.dispatchEvent Date();
+els.gregInput.dispatchEvent(new Event('change(new Event('change'));
+renderCalendar'));
+renderCalendar();
+</script();
+</script>
+</body>
+</body>
+</html>
+</html>
+```>
